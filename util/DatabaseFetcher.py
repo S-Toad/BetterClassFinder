@@ -1,8 +1,12 @@
 from TimeRange import TimeRange
+from Course import Course
+from bs4 import BeautifulSoup
+import requests
 # TODO: Possible values for the parameters should be scraped from database, maybe?
 
 class DatabaseFetcher():
     WINTER_TERM = '201810'
+    URL = 'https://admin.wwu.edu/pls/wwis/wwsktime.ListClass'     
     
     ALL_SUBJECTS = [
         'A/HI',
@@ -108,7 +112,7 @@ class DatabaseFetcher():
     ]
     
     # Mostly for reference
-    ALL_GURS= [
+    ALL_GURS = [
         'All',
         'ACOM',
         'ACGM',
@@ -142,83 +146,122 @@ class DatabaseFetcher():
         'WP2',
         'WP3',
     ]
+    
+    PASS_ON_LIST = [
+        'Class',
+        'Title',
+        'Crn',
+        'Instructor',
+        'Dates',
+    ]
+    
+    BASE_DICT = {
+        'sel_subj' : [
+            'dummy',
+            'dummy',
+        ],
+        'sel_gur' : [
+            'dummy',
+            'dummy',
+        ],
+        'sel_day' : [
+            'dummy',
+        ],
+        'sel_open' : [
+            'dummy',
+        ],
+        'term' : '',
+        'sel_inst' : '',
+        'sel_crn' : '', #Doesnt do anything
+        'sel_crse' : '',
+        'begin_hh' : '',
+        'end_hh' : '',
+        'begin_mi' : '',
+        'end_mi' : '',
+        'sel_cdts' : '',
+    }
 
     def __init__(
         self,
         subjects=ALL_SUBJECTS,
         gurs=['All'],
-        days=[],
         open=False,
-        terms=[WINTER_TERM],
-        instructors=['ANY'],
-        timeRanges=[TimeRange(0, 'A', 0, 'A')],
-        credits=['%25'],
-        courses=['']
+        term=WINTER_TERM,
+        instructor='ANY',
+        timeRange=TimeRange(0, 'A', 0, 'A'),
+        credits='%',
+        courseNumber=''
     ):
+        self.postDict = self.BASE_DICT.copy()
         
-        self.subjects = subjects
-        self.gurs = gurs
-        self.days = days
-        self.open = ['Y'] if open else []
-        self.terms = terms
-        self.instructors = instructors
-        self.timeRanges = timeRanges
-        self.credits = credits
-        self.courses = courses
+        self.postDict['sel_subj'].extend(subjects)
+        self.postDict['sel_gur'].extend(gurs)
+        self.postDict['sel_day'].extend(timeRange.days)
+        
+        self.postDict['term'] = term
+        self.postDict['sel_inst'] = instructor
+        self.postDict['sel_cdts'] = credits
+        self.postDict['sel_crse'] = courseNumber
+        
+        self.postDict['begin_hh'] = timeRange.startTime
+        self.postDict['begin_mi'] = timeRange.startTimePeriod
+        self.postDict['end_hh'] = timeRange.endTime
+        self.postDict['end_mi'] = timeRange.endTimePeriod
+        
+        if (open):
+            self.postDict['sel_open'].append('Y')
     
-    def buildBaseString(self):
-        URL = 'https://admin.wwu.edu/pls/wwis/wwsktime.ListClass?sel_subj=dummy&sel_subj=dummy&sel_gur=dummy&sel_gur=dummy&sel_day=dummy&sel_open=dummy&sel_crn=&'
-        
-        #URL += self.buildParam('term', self.term)
-        #URL += self.buildParam('sel_inst', self.instructors)
-        #URL += self.buildParam('sel_crse', self.courses)
-        #URL += 'begin_hh=' + str(self.timeRanges[0].startTime) + "&"
-        #URL += 'end_hh=' + str(self.timeRanges[0].endTime) + "&"
-        #URL += 'begin_mi=' + str(self.timeRanges[0].startTimePeriod) + "&"
-        #URL += 'end_mi=' + str(self.timeRanges[0].endTimePeriod) + "&"
-        #URL += self.buildParam('sel_cdts', self.credits)
-        URL += self.buildListParam('sel_day', self.days)
-        URL += self.buildListParam('sel_gur', self.gurs)
-        URL += self.buildListParam('sel_subj', self.subjects)
-        URL += self.buildListParam('sel_open', self.open)
-        
-        return URL
-
-    def buildListParam(self, prefix, listItem):
-        paramString = ""
-    
-        for item in listItem:
-            stringItem = str(item)
-            if (stringItem == 'All'):
-                return prefix + '=' + stringItem + '&'
-        
-            paramString += prefix + '=' + stringItem
-            paramString += "&"
-            
-        return paramString
-    
-    def buildParam(self, prefix, item):
-        return prefix + '=' + item + '&'
-   
     def query(self):
-        baseString = self.buildBaseString()
-        appendors = []
-        for term in self.terms:
-            termString = self.buildParam('term', term)
-            for instructor in self.instructors:
-                instructorString = termString + self.buildParam('sel_inst', instructor)
-                for course in self.courses:
-                    courseString = instructorString + self.buildParam('sel_crse', course)
-                    for credit in self.credits:
-                        creditString = courseString + self.buildParam('sel_cdts', credit)
-                        for timeRange in self.timeRanges:
-                            timeRangeString = creditString
-                            timeRangeString += buildParam('begin_hh', timeRange.startTime)
-                            timeRangeString += buildParam('end_hh', timeRange.endTime)
-                            timeRangeString += buildParam('begin_mi', timeRange.startTimePeriod)
-                            timeRangeString += buildParam('end_mi', timeRange.endTimePeriod)
-                            
-                            appendors.append(timeRangeString)
+        print(self.postDict)
+        r = requests.post(self.URL, self.postDict)
+        print(r.status_code, r.reason)
+        # print(r.text + '...')
         
-        for appendor in appendors:
-            print(baseString + appendor)
+        courseList = []
+        
+        soup = BeautifulSoup(r.text, 'html.parser')
+        f = open('test.html', 'w')
+        f.write(soup.prettify())
+        f.close()
+        
+        results = soup.find_all('font', {'color': '#000080'})
+        
+        # for result in results:
+            # print(result.text)
+        
+        i = 5
+        cap = len(results)
+        while i < 20:
+            tempList = results[i].text.split(' ')
+            classSubject = tempList[0]
+            classNumber = tempList[1]
+            i += 1
+            
+            className = results[i].text
+            i += 1
+            
+            profName = results[i].text
+            profFirst = None
+            profSecond = None
+            
+            if (', ' in profName):
+                tempList = profFirst.split(', ')
+                profFirst = tempList[1]
+                profSecond = tempList[0]
+            else:
+                # 'Staff' is an example of what may occur here
+                profFirst = profName
+                profSecond = ''
+            i += 1
+            # Do something with span here
+            i += 1
+            print("Class: " + results[i].text)
+            print("Class Name: " + results[i].text)
+            print("Class Prof: " + results[i].text)
+            print("Span: " + results[i].text)
+            print("-------------")
+            
+        #tables = soup.find_all("table")
+        #table = tables[1]
+        
+        #print(table)
