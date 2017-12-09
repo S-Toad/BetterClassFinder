@@ -7,8 +7,8 @@ def main():
     
     databaseFetcher = DatabaseFetcher(
         term=WINTER_TERM_2018,
-        subjects=['MATH'],
-        timeRange=TimeRange(0, 'A', 0, 'A'),
+        timeRange=TimeRange(11, 'A', 2, 'P'),
+        subjects=['MATH']
     )
     
     databaseFetcher.query()
