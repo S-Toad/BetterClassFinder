@@ -1,89 +1,74 @@
-from Course import Course
+from util.Course import Course
 
 class CourseConstructor():
     def __init__(self):
-        self.name = ''
         self.subject = ''
-        self.classNumber = ''
-        self.crn = ''
-        self.roomBuilding = ''
-        self.roomNumber = ''
-        self.credits = ''
+        self.courseNumber = ''
+        self.className = ''
         self.classSize = ''
         self.profName = ''
         self.span = ''
         self.gur = ''
+        self.dates = []
+        self.credits = ''
+        self.fee = ''
+        self.restrictions = ''
         self.prereq = ''
-        
-        self.time = ''
-        self.timeStart = ''
-        self.timeStartPeriod = ''
-        self.timeEnd = ''
-        self.timeEndPeriod = ''
-        self.days = []
-    
+        self.additionalInfo = ''
+        self.crn = ''
+
     def construct(self):
+        self.prereq = self.prereq.replace('  ', ' ').rstrip()
+        self.restrictions = self.restrictions.replace('  ', ' ').rstrip()
+        self.additionalInfo = self.additionalInfo.replace('  ', ' ').rstrip()
     
-        self.generateTimes()
+        # There's a space in front of these strings
+        self.prereq = self.prereq[1:]
+        self.restrictions = self.restrictions[1:]
+        self.additionalInfo = self.additionalInfo[1:]
         
+        # This isn't true all time time
+        self.additionalInfo = self.additionalInfo.replace('CLOSED:  Waitlist Available', '')
+        self.additionalInfo = self.additionalInfo.replace('CLOSED', '')
+
+        if (self.fee != ''):
+            self.fee = "$" + self.fee.split("$")[1]
+
         f = open('courses.txt', 'a')
         
         f.write("--------------------------\n")
-        f.write("Name: " + self.name + '\n')
+        f.write("Name: " + self.className + '\n')
         f.write("Subject: " + self.subject + '\n')
-        f.write("Class Number: " + self.classNumber + '\n')
+        f.write("Course Number: " + self.courseNumber + '\n')
         f.write("Class Size: " + self.classSize + '\n')
-        f.write("Credits: " + self.credits + '\n')
-        f.write("CRN: " + self.crn + '\n')
-        f.write("Building: " + self.roomBuilding + '\n')
-        f.write("Room Number: " + self.roomNumber + '\n')
-        f.write("Prereq: " + self.prereq + '\n')
         f.write("Prof Name: " + self.profName + '\n')
         f.write("Span: " + self.span + '\n')
         f.write("GUR: " + self.gur + '\n')
+        f.write("Credits: " + self.credits + '\n')
+        f.write("Fee: " + self.fee + '\n')
+        f.write("Restrictions: " + self.restrictions + '\n')
+        f.write("Prereq: " + self.prereq + '\n')
+        f.write("Additional Info: " + self.additionalInfo + '\n')
+        f.write("CRN: " + self.crn + '\n')
         
-        f.write("Start: " + self.timeStart + '\n')
-        f.write("Start Period: " + self.timeStartPeriod+ '\n')
-        f.write("End: " + self.timeEnd + '\n')
-        f.write("End Period: " + self.timeEndPeriod + '\n')
+        for courseDate in self.dates:
+            courseDate.clean()
+            f.write('Days: ' + courseDate.days + '\n')
+            f.write('Time: ' + courseDate.timeStart + courseDate.timeStartPeriod + '-' + courseDate.timeEnd + courseDate.timeEndPeriod + '\n')
+            f.write('Room: ' + courseDate.classBuilding + ' ' + courseDate.classNumber + '\n')
         
         f.close()
         
-        # return Course(
-            # self.name,
-            # self.subject,
-            # self.classNumber,
-            # self.crn,
-            # self.roomBuilding,
-            # self.roomNumber,
-            # self.credits
-        # )
-    
-    def generateTimes(self):
-        if ('pm' in self.time):
-            self.timeEndPeriod = 'P'
-        else:
-            self.timeEndPeriod = 'A'
-        
-        splitString = ' '.join(self.time.split()).split(' ')
-        
-        for c in splitString[0]:
-            self.days.append(c)
-        
-        if (self.timeEndPeriod == 'A'):
-            self.timeStartPeriod = 'A'
-            return
-        
-        splitTimeString = splitString[1].split('-')
-        
-        self.timeStart = splitTimeString[0]
-        self.timeEnd = splitTimeString[1]
-        
-        startTimeInt = int(self.timeStart.split(':')[0])
-        endTimeInt = int(self.timeEnd.split(':')[0])
-        
-        # Assuming that 11pm nor 12am are reasonable start times. Edge Cases
-        if ((startTimeInt > endTimeInt and startTimeInt != 12) or startTimeInt == 11):
-            self.timeStartPeriod = 'A'
-        else:
-            self.timeStartPeriod = 'P'
+        return Course(
+            self.subject,
+            self.courseNumber,
+            self.className,
+            self.profName,
+            self.gur,
+            self.dates,
+            self.credits,
+            self.fee,
+            self.restrictions,
+            self.prereq,
+            self.additionalInfo
+        )

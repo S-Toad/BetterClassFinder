@@ -1,6 +1,6 @@
-from TimeRange import TimeRange
-from Course import Course
-from CourseConstructor import CourseConstructor
+from util.ClassDate import ClassDate
+from util.Course import Course
+from util.CourseConstructor import CourseConstructor
 from bs4 import BeautifulSoup
 import requests
 # TODO: Possible values for the parameters should be scraped from database, maybe?
@@ -8,7 +8,7 @@ import requests
 class DatabaseFetcher():
     WINTER_TERM = '201810'
     URL = 'https://admin.wwu.edu/pls/wwis/wwsktime.ListClass'     
-    STARTING_FONT = 16
+    STARTING_FONT_INDEX = 16
     
     ALL_SUBJECTS = [
         'A/HI',
@@ -191,7 +191,11 @@ class DatabaseFetcher():
         open=False,
         term=WINTER_TERM,
         instructor='ANY',
-        timeRange=TimeRange(0, 'A', 0, 'A'),
+        startTime=0,
+        startTimePeriod='A',
+        endTime=0,
+        endTimePeriod='A',
+        days=[],
         credits='%',
         courseNumber=''
     ):
@@ -201,151 +205,152 @@ class DatabaseFetcher():
         # Code below appends onto the dictionary
         self.postDict['sel_subj'].extend(subjects)
         self.postDict['sel_gur'].extend(gurs)
-        self.postDict['sel_day'].extend(timeRange.days)
+        self.postDict['sel_day'].extend(days)
         
         self.postDict['term'] = term
         self.postDict['sel_inst'] = instructor
         self.postDict['sel_cdts'] = credits
         self.postDict['sel_crse'] = courseNumber
         
-        self.postDict['begin_hh'] = timeRange.startTime
-        self.postDict['begin_mi'] = timeRange.startTimePeriod
-        self.postDict['end_hh'] = timeRange.endTime
-        self.postDict['end_mi'] = timeRange.endTimePeriod
+        self.postDict['begin_hh'] = startTime
+        self.postDict['begin_mi'] = startTimePeriod
+        self.postDict['end_hh'] = endTime
+        self.postDict['end_mi'] = endTimePeriod
         
         # If we're not looking for open classes we simply send a payload of nothing because that makes sense right
         if (open):
             self.postDict['sel_open'].append('Y')
     
     def query(self):
-        # Prints out our post request to verify it was generated quickly
         print(self.postDict)
-        # Send the request to the DB
         r = requests.post(self.URL, self.postDict)
         print(r.status_code, r.reason)
         
-        # Parses the text and writes it to a file for further verificaiton
-        soup = BeautifulSoup(r.text, 'html.parser')
+        return self.constructCourses(r)
+
+    def constructCourses(self, request):
+        soup = BeautifulSoup(request.text, 'html.parser')
         f = open('test.html', 'w')
         f.write(soup.prettify())
         f.close()
-
-        # CRNs nicely line up with the courses so we collect them and leave them in a list for now
         crns = soup.find_all('input', {"name" : "sel_crn"})
         
-        # 'font' is the tag that houses all the data we're looking for, how convienient :D
         results = soup.find_all('font')
         
-        # We start the construction of a course, everytime a new course is created we set this to a new course constructor
         courseConstructor = CourseConstructor()
         courseList = []
         
-        # We start on 16 (STARTING_FONT) so that we can skip the headers of the table.
-        # This magic number is gathered from the raw html page
-        i = self.STARTING_FONT
-        # J is essentially the index of courses, it keeps account of what CRNs we're tying.
-        # This makes more sense later down
+        i = self.STARTING_FONT_INDEX
         j = 0
         cap = len(results)
-        print("-------------")
-        while i < cap:
-            # We get the the current text we're on and get rid of trailing characters
-            resultText = results[i].text.rstrip()
-
-            # Increment our line
-            i+=1
-
-            # GURs are simply a single word which makes this check very easy to do and find
-            # Example 'QSR'
-            if (resultText in self.ALL_GURS):
-                courseConstructor.gur = resultText
-                continue
-
-            # Staff is also another easy knock out, this is a professor name when the prof has
-            # not been decided yet. Single word string
-            if (resultText == 'Staff'):
-                courseConstructor.profName = resultText
-                continue
-
-            # Prerequisites are an easy check off as well. We follow the text after seeing this line
-            # At the end of this is where we construct as well
-            if (resultText == 'Prerequisites:'):
-                prereq = ''
-                prereq += results[i].text.rstrip()
+        while(i < cap):
+            while(i < cap and not self.isClass(results[i])):
                 i+=1
 
-                # We essentially keep iterating through future lines until we either hit a new subject or
-                # we hit the end of the file.
-                while(True):
-                    # End of file condition
-                    if (i + 1 > cap):
-                        break
+            if (i==cap):
+                break
 
-                    # Blank line condition
-                    if (results[i].text.rstrip() == ''):
-                        i+=1
-                        continue
+            resultText = results[i].text
+            resultText = resultText.replace('I T', 'IT')
 
-                    # New subject condition
-                    if (results[i].text.rstrip().split(' ')[0] in self.ALL_SUBJECTS):
-                        break
+            print(resultText)
+            courseConstructor.subject, courseConstructor.courseNumber = resultText.split(' ')
 
-                    # New prereq line so we append to what we have so far
-                    prereq += ' ' + results[i].text.rstrip()
+            i+=1
+            courseConstructor.className = results[i].text
+
+            i+=1
+            courseConstructor.classSize = results[i].text
+
+            i+=3
+            courseConstructor.profName = results[i].text
+
+            i+=1
+            courseConstructor.span = results[i].text
+
+            i+=1
+            resultText = results[i].text
+            if (resultText != ''):
+                courseConstructor.gur = resultText
+
+            i+=1
+            time = results[i].text
+
+            i+=1
+            room = results[i].text
+            courseConstructor.dates.append(ClassDate(time, room))
+
+            i+=1
+            courseConstructor.credits = results[i].text
+
+            i+=1
+            resultText = results[i].text
+            if ("$" in resultText):
+                courseConstructor.fee = resultText
+                i+=1
+                if(i == cap):
+                    break
+
+            additionalTimes = []
+            prereq = ''
+            restrictions = ''
+            additionalInfo = ''
+
+            resultText = results[i].text
+
+            if (':' in resultText and '-' in resultText):
+                time = results[i].text
+                i+=1
+                room = results[i].text
+                i+=1
+
+                courseConstructor.dates.append(ClassDate(time, room))
+
+            if(i == cap):
+                break
+            resultText = results[i].text
+
+            if (resultText == 'Restrictions: '):
+                i+=1
+                while(i != cap and results[i].text != 'Prerequisites:' and self.isRed(results[i])):
+                    restrictions += ' '  + results[i].text
                     i+=1
+                courseConstructor.restrictions = restrictions
 
-                # Get rid of double spaces and replace with single
-                prereq = ' '.join(prereq.split())
-                # Get rid of waitlist avaialable, we can show this a different way later
-                prereq = prereq.replace('CLOSED: Waitlist Available', '')
+            if(i == cap):
+                break
+            resultText = results[i].text
+
+            if (resultText == 'Prerequisites:'):
+                i+=1
+                while(i != cap and self.isRed(results[i])):
+                    prereq += ' ' + results[i].text
+                    i+=1
                 courseConstructor.prereq = prereq
 
-                # When we construct we finally get our crns via another list. The order is thankfully consistent with 
-                # our classes
-                courseConstructor.crn = crns[j]['value']
-                j+=1
+            while (i != cap and self.isAdditionalInfo(results[i])):
+                additionalInfo += ' '  + results[i].text
+                i+=1
 
-                # Construct and generate new constructor
-                # TODO: Add to list here
-                courseConstructor.construct()
-                courseConstructor = CourseConstructor()
-                continue
+            courseConstructor.additionalInfo = additionalInfo
+            courseConstructor.crn = crns[j]['value']
+            courseList.append(courseConstructor.construct())
+            courseConstructor = CourseConstructor()
+            j+=1
 
-            # If there's a comma we either have a a prereq or a professor name.
-            # Normally we should check to see if splitting the string on a ', ' results in 2 words because
-            # a prereq could have a comma.
-            # However we find prereqs following a "Prerequisites" making this additional check pointless
-            if (', ' in resultText):
-                splitString = resultText.split(', ')
-                courseConstructor.profName = splitString[1] + ' ' + splitString[0]
-                continue
+            # When we reach a new course section we have to skip over a few lines of junk
+            if (i != cap and results[i].text == 'Class'):
+                print('SKIPPING')
+                i+=14
 
-            # If there's a - the only thing that has that is a date span or a time span
-            # We determine which is which from checking to see if it has a / or a :
-            # We can be pretty sure in what we find
-            if ('-' in resultText):
-                if ('/' in resultText):
-                    courseConstructor.span = resultText
-                    continue
-                if (':' in resultText):
-                    courseConstructor.time = resultText
-                    continue
+        return courseList
 
-            # If we've gotten this far we got rid of all the easy checks, so we need to see what happens if we split on a space.
-            # We could get a class or a building.
-            splitString = resultText.split(' ')
+    def isRed(self, result):
+        return (result.has_attr('color') and result['color'] == 'red')
 
-            # If the first word is a value in all of our subjects, we have a subject
-            if (splitString[0] in self.ALL_SUBJECTS):
-                courseConstructor.subject = splitString[0] # Class is the first part
-                courseConstructor.classNumber = splitString[1] # Class number is the second part
-                courseConstructor.name = results[i].text.rstrip() # Clean text up, the detailed name is convinentlty the next line
-                i+=1 # Increment since we stole the text from the next iteration
-                courseConstructor.classSize = results[i].text.rstrip() # Conviently after class name
-                i+=1 # Iterate because we skipped over again
-            else: # If the first word isnt a subject we can assume is the room building
-                courseConstructor.roomBuilding = splitString[0] # Part 1 of string
-                courseConstructor.roomNumber = splitString[1] # Part 2 of string
-                courseConstructor.credits = results[i].text.rstrip() # Credits is also convinentlty after room number too
-                i+=1 # Again, increment because we stole the next results
-            continue
+    def isClass(self, result):
+        value = result.find('a')
+        return (value != None)
+
+    def isAdditionalInfo(self, result):
+        return (result.has_attr('size') and result['size'] == '-2')
