@@ -1,3 +1,4 @@
 *.pyc
 test.html
 courses.txt
+migrations/
