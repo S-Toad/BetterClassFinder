@@ -24,6 +24,28 @@ class Course(models.Model):
     course_crn = models.CharField(max_length=8)
 
     course_dates = models.ManyToManyField(CourseDate)
+    
+    def getDates(self):
+        dateModels = self.course_dates.all()
+        amountOfDates = len(dateModels)
+        
+        if (amountOfDates == 0):
+            return ''
+        elif(amountOfDates == 1):
+            return dateModels[0].time_days
+        
+        dateString = ''
+        dateList = ['M', 'T', 'W', 'R', 'F', 'S', 'U']
+        
+        for x in range(7):
+            char = dateList[x]
+            
+            for date in dateModels:
+                if (char in date.time_days):
+                    dateString += char
+                    break
+            
+        return dateString
 
 class Term(models.Model):
     name = models.CharField(max_length=16)

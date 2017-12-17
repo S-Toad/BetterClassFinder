@@ -28,8 +28,21 @@ def get_courses(request):
             continue
         qObjectCombine = qObjectCombine & qObject
     
-    courses = Course.objects.all() if qObjectCombine == None else Course.objects.filter(qObjectCombine)
+    coursesRaw = Course.objects.all() if qObjectCombine == None else Course.objects.filter(qObjectCombine)
+    coursesList = list(coursesRaw)
     
+    courses = []
+    
+    datesQuery = paramDict['c_date']
+    if (len(datesQuery) == 0):
+        courses = coursesList
+    else:
+        for course in coursesList:
+            courseDates = course.getDates()
+            for date in datesQuery:
+                if (courseDates == date):
+                    courses.append(course)
+                    break
     
     json_response = [
         {
@@ -178,6 +191,7 @@ def generateDictionary(queryString):
         'c_prereq': [],
         'c_info': [],
         'c_crn': [],
+        'c_date': [],
     }
     
     listOfParams = []
