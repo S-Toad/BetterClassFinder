@@ -28,7 +28,7 @@ def get_courses(request):
             continue
         qObjectCombine = qObjectCombine & qObject
     
-    courses = Course.objects.filter(qObjectCombine)
+    courses = Course.objects.all() if qObjectCombine == None else Course.objects.filter(qObjectCombine)
     
     
     json_response = [
