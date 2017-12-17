@@ -30,7 +30,7 @@ class ClassDate():
                 timeStartInt = int(self.timeStart.split(':')[0])
                 timeEndInt = int(self.timeEnd.split(':')[0])
                 
-                if (timeStartInt == 12 or (timeEndInt != 12 and timeStartInt < timeEndInt)):
+                if (timeStartInt == 12 or (timeEndInt != 12 and timeStartInt <= timeEndInt)):
                     self.timeStartPeriod = 'P'
                 else:
                     self.timeStartPeriod = 'A'
