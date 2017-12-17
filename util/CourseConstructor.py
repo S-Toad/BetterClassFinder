@@ -70,5 +70,6 @@ class CourseConstructor():
             self.fee,
             self.restrictions,
             self.prereq,
-            self.additionalInfo
+            self.additionalInfo,
+            self.crn
         )

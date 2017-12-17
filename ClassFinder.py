@@ -35,7 +35,8 @@ def main():
             course_fee = course.fee,
             course_restrictions = course.restrictions,
             course_prereq = course.prereq,
-            course_additional_info = course.additionalInfo
+            course_additional_info = course.additionalInfo,
+            course_crn = course.crn
         )
         
         courseModel.save()

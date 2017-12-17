@@ -12,7 +12,8 @@ class Course():
         fee,
         restrictions,
         prereq,
-        additionalInfo
+        additionalInfo,
+        crn
         ):
         self.subject = subject
         self.courseNumber = courseNumber
@@ -25,3 +26,4 @@ class Course():
         self.restrictions = restrictions
         self.prereq = prereq
         self.additionalInfo = additionalInfo
+        self.crn = crn

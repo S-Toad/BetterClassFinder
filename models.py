@@ -21,6 +21,7 @@ class Course(models.Model):
     course_restrictions = models.CharField(max_length=512, blank=True)
     course_prereq = models.CharField(max_length=512, blank=True)
     course_additional_info = models.CharField(max_length=512, blank=True)
+    course_crn = models.CharField(max_length=8)
 
     course_dates = models.ManyToManyField(CourseDate)
 
