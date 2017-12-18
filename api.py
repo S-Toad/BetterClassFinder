@@ -6,27 +6,20 @@ def get_courses(request):
     paramDict = generateDictionary(request.META['QUERY_STRING'])
     
     listOfQObjects = []
-    listOfQObjects.append(generateQSubject(paramDict))
-    listOfQObjects.append(generateQNum(paramDict))
-    listOfQObjects.append(generateQName(paramDict))
-    listOfQObjects.append(generateQProf(paramDict))
-    listOfQObjects.append(generateQGUR(paramDict))
-    # qCreditObject = generateQCredit(paramDict)
-    # qFeeObject
-    listOfQObjects.append(generateQRestriction(paramDict))
-    listOfQObjects.append(generateQPrereq(paramDict))
-    listOfQObjects.append(generateQAdditionalInfo(paramDict))
-    listOfQObjects.append(generateQCRN(paramDict))
+    listOfQObjects.append(generateQObject(paramDict['c_subj'], True, 'course_subject__iexact'))
+    listOfQObjects.append(generateQObject(paramDict['c_num'], True, 'course_number__iexact'))
+    listOfQObjects.append(generateQObject(paramDict['c_name'], True, 'course_name__icontains'))
+    listOfQObjects.append(generateQObject(paramDict['c_prof'], True, 'course_prof_name__icontains'))
+    listOfQObjects.append(generateQObject(paramDict['c_gur'], True, 'course_gur__icontains'))
+    listOfQObjects.append(generateQObject(paramDict['c_restrict'], True, 'course_restrictions__icontains'))
+    listOfQObjects.append(generateQObject(paramDict['c_prereq'], True, 'course_prereq__icontains'))
+    listOfQObjects.append(generateQObject(paramDict['c_info'], True, 'course_additional_info__icontains'))
+    listOfQObjects.append(generateQObject(paramDict['c_crn'], True, 'course_crn__exact'))
+    listOfQObjects = filter(None, listOfQObjects)
     
     qObjectCombine = None
-    
     for qObject in listOfQObjects:
-        if qObject == None:
-            continue
-        elif qObjectCombine == None:
-            qObjectCombine = qObject
-            continue
-        qObjectCombine = qObjectCombine & qObject
+        qObjectCombine = qObject if qObjectCombine == None else qObjectCombine & qObject
     
     coursesRaw = Course.objects.all() if qObjectCombine == None else Course.objects.filter(qObjectCombine)
     coursesList = list(coursesRaw)
@@ -74,105 +67,21 @@ def get_courses(request):
     ]
 
     return JsonResponse(json_response, safe=False)
-
-def generateQSubject(paramDict):
-    qSubjObject = None
-    for subject in paramDict['c_subj']:
-        newQSubjObject = Q(course_subject__iexact=subject)
-        if (qSubjObject == None):
-            qSubjObject = newQSubjObject
-            continue
-        qSubjObject = qSubjObject | newQSubjObject
-
-    return qSubjObject
-
-def generateQNum(paramDict):
-    qNumObject = None
-    for number in paramDict['c_num']:
-        newQNumObject = Q(course_number__iexact=number)
-        if (qNumObject == None):
-            qNumObject = newQNumObject
-            continue
-        qNumObject = qNumObject | newQNumObject
-
-    return qNumObject
-
-def generateQName(paramDict):
-    qNameObject = None
-    for name in paramDict['c_name']:
-        newQNameObject = Q(course_name__icontains=name)
-        if (qNameObject == None):
-            qNameObject = newQNameObject
-            continue
-        qNameObject = qNameObject | newQNameObject
-
-    return qNameObject
-
-def generateQProf(paramDict):
-    qProfObject = None
-    for prof in paramDict['c_prof']:
-        newQProfObject = Q(course_prof_name__icontains=prof)
-        if (qProfObject == None):
-            qProfObject = newQProfObject
-            continue
-        qProfObject = qProfObject | newQProfObject
-
-    return qProfObject
-
-def generateQGUR(paramDict):
-    qGURObject = None
-    for gur in paramDict['c_gur']:
-        newQGURObject = Q(course_gur__icontains=gur)
-        if (qGURObject == None):
-            qGURObject = newQGURObject
-            continue
-        qGURObject = qGURObject | newQGURObject
-
-    return qGURObject
-
-def generateQRestriction(paramDict):
-    qRestrictionObject = None
-    for restriction in paramDict['c_restrict']:
-        newQRestrictionObject = Q(course_restrictions__icontains=restriction)
-        if (qRestrictionObject == None):
-            qRestrictionObject = newQRestrictionObject
-            continue
-        qRestrictionObject = qRestrictionObject | newQRestrictionObject
-
-    return qRestrictionObject
-
-def generateQPrereq(paramDict):
-    qPrereqObject = None
-    for prereq in paramDict['c_prereq']:
-        newQPrereqObject = Q(course_prereq__icontains=prereq)
-        if (qPrereqObject == None):
-            qPrereqObject = newQPrereqObject
-            continue
-        qPrereqObject = qPrereqObject | newQPrereqObject
-
-    return qPrereqObject
     
-def generateQAdditionalInfo(paramDict):
-    qAdditionalInfoObject = None
-    for additional_info in paramDict['c_info']:
-        newQAdditionalInfoObject = Q(course_additional_info__icontains=additional_info)
-        if (qAdditionalInfoObject == None):
-            qAdditionalInfoObject = newQAdditionalInfoObject
-            continue
-        qAdditionalInfoObject = qAdditionalInfoObject | newQAdditionalInfoObject
-
-    return qAdditionalInfoObject
-
-def generateQCRN(paramDict):
-    qCRNObject = None
-    for crn in paramDict['c_crn']:
-        newQCRNObject = Q(course_crn__exact=crn)
-        if (qCRNObject == None):
-            qCRNObject = newQCRNObject
-            continue
-        qCRNObject = qCRNObject | newQCRNObject
-
-    return qCRNObject
+def generateQObject(values, combineByOr, param):
+    qObject = None
+    
+    for value in values:
+        evalString = 'global qNewObject\nqNewObject = Q({!s}={!r})'.format(param, value)
+        exec(evalString)
+        if qObject == None:
+            qObject = qNewObject
+        elif combineByOr:
+            qObject = qObject | qNewObject
+        else:
+            qObject = qObject & qNewObject
+    
+    return qObject
     
 def generateDictionary(queryString):
     defaultDict = {
