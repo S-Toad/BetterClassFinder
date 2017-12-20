@@ -1,41 +1,29 @@
 from django.http import JsonResponse
 from BetterClassFinder.models import Term, Course, CourseDate
 from django.db.models import Q
+import copy
 
 def get_courses(request):    
-    paramDict = generateDictionary(request.META['QUERY_STRING'])
+    paramDicts = generateDictionary(request.META['QUERY_STRING'])
+    listOfCourses = []
     
-    listOfQObjects = []
-    listOfQObjects.append(generateQObject(paramDict['c_subj'], True, 'course_subject__iexact'))
-    listOfQObjects.append(generateQObject(paramDict['c_num'], True, 'course_number__iexact'))
-    listOfQObjects.append(generateQObject(paramDict['c_name'], True, 'course_name__icontains'))
-    listOfQObjects.append(generateQObject(paramDict['c_prof'], True, 'course_prof_name__icontains'))
-    listOfQObjects.append(generateQObject(paramDict['c_gur'], True, 'course_gur__icontains'))
-    listOfQObjects.append(generateQObject(paramDict['c_restrict'], True, 'course_restrictions__icontains'))
-    listOfQObjects.append(generateQObject(paramDict['c_prereq'], True, 'course_prereq__icontains'))
-    listOfQObjects.append(generateQObject(paramDict['c_info'], True, 'course_additional_info__icontains'))
-    listOfQObjects.append(generateQObject(paramDict['c_crn'], True, 'course_crn__exact'))
-    listOfQObjects = filter(None, listOfQObjects)
-    
-    qObjectCombine = None
-    for qObject in listOfQObjects:
-        qObjectCombine = qObject if qObjectCombine == None else qObjectCombine & qObject
-    
-    coursesRaw = Course.objects.all() if qObjectCombine == None else Course.objects.filter(qObjectCombine)
-    coursesList = list(coursesRaw)
-    
-    courses = []
-    
-    datesQuery = paramDict['c_date']
-    if (len(datesQuery) == 0):
-        courses = coursesList
+    if (not paramDicts):
+        listOfCourses = Course.objects.all()
     else:
-        for course in coursesList:
-            courseDates = course.getDates()
-            for date in datesQuery:
-                if (courseDates == date):
-                    courses.append(course)
-                    break
+        for paramDict in paramDicts:
+            q = Course.objects
+            q = generateQObject(paramDict['c_subj'], 'course_subject__iexact', q)
+            q = generateQObject(paramDict['c_num'], 'course_number__iexact', q)
+            q = generateQObject(paramDict['c_name'], 'course_name__icontains', q)
+            q = generateQObject(paramDict['c_prof'], 'course_prof_name__icontains', q)
+            q = generateQObject(paramDict['c_gur'], 'course_gur__icontains', q)
+            q = generateQObject(paramDict['c_restrict'], 'course_restrictions__icontains', q)
+            q = generateQObject(paramDict['c_prereq'], 'course_prereq__icontains', q)
+            q = generateQObject(paramDict['c_info'], 'course_additional_info__icontains', q)
+            q = generateQObject(paramDict['c_crn'], 'course_crn__exact', q)
+            
+            courses = list(q)
+            listOfCourses.extend(courses)
     
     json_response = [
         {
@@ -63,25 +51,34 @@ def get_courses(request):
                 for courseDate in course.course_dates.all()
             ]
         }
-        for course in courses
+        for course in listOfCourses
     ]
 
     return JsonResponse(json_response, safe=False)
     
-def generateQObject(values, combineByOr, param):
+def generateQObject(values, param, q):
     qObject = None
-    
+    i = 1
     for value in values:
+        exclude = False
+        if '!' in value:
+            exclude = True
+            value = value.replace('!', '')
+        # TODO: Eric thinks this is gross, how to do better?
         evalString = 'global qNewObject\nqNewObject = Q({!s}={!r})'.format(param, value)
         exec(evalString)
-        if qObject == None:
+        
+        if exclude:
+            q = q.exclude(qNewObject)
+        elif qObject == None:
             qObject = qNewObject
-        elif combineByOr:
-            qObject = qObject | qNewObject
         else:
-            qObject = qObject & qNewObject
-    
-    return qObject
+            qObject = qObject | qNewObject
+      
+    if (qObject != None):
+        return q.filter(qObject)
+    else:
+        return q
     
 def generateDictionary(queryString):
     defaultDict = {
@@ -90,31 +87,55 @@ def generateDictionary(queryString):
         'c_name': [],
         'c_prof': [],
         'c_gur': [],
-        'c_credit_low': '',
-        'c_credit_high': '',
-        'c_credit': '',
-        'c_flat': True,
-        'c_fee_per_credit': True,
-        'c_fee_max': 9999,
+        'c_credit_min': None,
+        'c_credit_max': None,
+        'c_credit': None,
+        'c_fee': True,
         'c_restrict': [],
         'c_prereq': [],
         'c_info': [],
         'c_crn': [],
-        'c_date': [],
+        'c_time_days': [],
+        'c_time_start': [],
+        'c_time_end': [],
+        'c_time_building': [],
+        'c_time_nroom': [],
+        'c_ptime_days': [],
+        'c_ptime_start': [],
+        'c_ptime_end': [],
+        'c_ptime_building': [],
+        'c_ptime_nroom': [],
+        'c_stime_days': [],
+        'c_stime_start': [],
+        'c_stime_end': [],
+        'c_stime_building': [],
+        'c_stime_nroom': [],
     }
     
+    if (queryString == ''):
+        return None
+    
+    listOfQueryStrings = []
+    for query in queryString.split('&'):
+        listOfQueryStrings.append(query)
+    if not listOfQueryStrings:
+        listOfQueryStrings.append(queryString)
+    
     listOfParams = []
+    for query in listOfQueryStrings:
+        emptyList = []
+        for paramValue in query.split('?'):
+            emptyList.append(paramValue.split('='))
+        listOfParams.append(emptyList)
     
-    for value in queryString.split('?'):
-        listOfParams.append(value.split('='))
-    
-    for listParam in listOfParams:
-        if listParam[0] in defaultDict:
-            if type(defaultDict[listParam[0]]) is list:
-                defaultDict[listParam[0]].append(listParam[1])
-                print("Appending " + listParam[1] + " to list with key " + listParam[0])
-            else:
-                defaultDict[listParam[0]] = listParam[1]
-                print("Assigning " + listParam[1] + " with key " + listParam[0])
-    
-    return defaultDict
+    listOfDict = []
+    for listOfParam in listOfParams:
+        copyDict = copy.deepcopy(defaultDict)
+        for param in listOfParam:
+            if param[0] in copyDict:
+                if type(copyDict[param[0]]) is list:
+                    copyDict[param[0]].append(param[1])
+                else:
+                    copyDict[param[0]] = param[1]
+        listOfDict.append(copyDict)
+    return listOfDict
