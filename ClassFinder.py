@@ -27,11 +27,10 @@ def main():
     term.save()
     for course in courseList:
         primaryDate = course.dates[0]
+        militaryTime = primaryDate.getMilitaryTime()
         primaryDateModel = CourseDate(
-            time_start = primaryDate.timeStart,
-            time_end = primaryDate.timeEnd,
-            time_start_period = primaryDate.timeStartPeriod,
-            time_end_period = primaryDate.timeEndPeriod,
+            time_start = militaryTime[0],
+            time_end = militaryTime[1],
             time_days = primaryDate.days,
             time_building = primaryDate.classBuilding,
             time_room_number = primaryDate.classNumber
@@ -41,11 +40,10 @@ def main():
         secondaryDateModel = None
         if len(course.dates) > 1:
             secondaryDate = course.dates[1]
+            militaryTime = secondaryDate.getMilitaryTime()
             secondaryDateModel = CourseDate(
-                time_start = secondaryDate.timeStart,
-                time_end = secondaryDate.timeEnd,
-                time_start_period = secondaryDate.timeStartPeriod,
-                time_end_period = secondaryDate.timeEndPeriod,
+                time_start = militaryTime[0],
+                time_end = militaryTime[1],
                 time_days = secondaryDate.days,
                 time_building = secondaryDate.classBuilding,
                 time_room_number = secondaryDate.classNumber
