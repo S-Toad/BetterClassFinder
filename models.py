@@ -1,10 +1,8 @@
 from django.db import models
 
 class CourseDate(models.Model):
-    time_start = models.CharField(max_length=8)
-    time_end = models.CharField(max_length=8)
-    time_start_period = models.CharField(max_length=4)
-    time_end_period = models.CharField(max_length=4)
+    time_start = models.IntegerField()
+    time_end = models.IntegerField()
     time_days = models.CharField(max_length=8)
     time_building = models.CharField(max_length=8)
     time_room_number = models.CharField(max_length=8)
@@ -35,38 +33,6 @@ class Course(models.Model):
         related_name='secondary_course_date',
         null=True,
     )
-    
-    '''
-    def getPrimaryDate(self):
-        return self.course_dates.all()[0]
-    
-    def getSecondaryDate(self):
-        size = len(self.course_dates.all())
-        
-        return None if size == 1 else self.course_dates.all()[1]
-    
-    def getDates(self):
-        dateModels = self.course_dates.all()
-        amountOfDates = len(dateModels)
-        
-        if (amountOfDates == 0):
-            return ''
-        elif(amountOfDates == 1):
-            return dateModels[0].time_days
-        
-        dateString = ''
-        dateList = ['M', 'T', 'W', 'R', 'F', 'S', 'U']
-        
-        for x in range(7):
-            char = dateList[x]
-            
-            for date in dateModels:
-                if (char in date.time_days):
-                    dateString += char
-                    break
-            
-        return dateString
-    '''
 
 class Term(models.Model):
     name = models.CharField(max_length=16)

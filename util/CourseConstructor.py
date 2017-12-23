@@ -34,8 +34,10 @@ class CourseConstructor():
         if (self.fee != ''):
             self.fee = "$" + self.fee.split("$")[1]
 
-        f = open('courses.txt', 'a')
-        
+        for courseDate in self.dates:
+            courseDate.clean()
+        '''
+        f = open('courses.txt', 'a')        
         f.write("--------------------------\n")
         f.write("Name: " + self.className + '\n')
         f.write("Subject: " + self.subject + '\n')
@@ -58,6 +60,7 @@ class CourseConstructor():
             f.write('Room: ' + courseDate.classBuilding + ' ' + courseDate.classNumber + '\n')
         
         f.close()
+        '''
         
         return Course(
             self.subject,

@@ -15,7 +15,7 @@ class ClassDate():
     def clean(self):
         if (self.rawTime == 'TBA' or self.rawTime.split(' ')[3] == '-'):
             self.days = 'TBA'
-            self.timeStart = self.timeEnd = self.timeStartPeriod = self.timeEndPeriod = 'N/A'
+            self.timeStart = self.timeEnd = self.timeStartPeriod = self.timeEndPeriod = None
         else:
             timeSplit = self.rawTime.split(' ')
             self.days = timeSplit[1]
@@ -41,3 +41,24 @@ class ClassDate():
         else:
             self.classBuilding, self.classNumber = self.rawClass.split(' ')
             self.classNumber = self.classNumber.replace(u'\xa0', u'')
+
+    def getMilitaryTime(self):
+        if not self.timeStart:
+            return [-1, -1]
+
+        militaryTime = []
+
+        startTimeInt = int(self.timeStart.replace(":", ""))
+        endTimeInt = int(self.timeEnd.replace(":", ""))
+
+        if (self.timeStartPeriod == 'A'):
+            militaryTime.append(startTimeInt)
+        else:
+            militaryTime.append(startTimeInt + 1200)
+        
+        if (self.timeEndPeriod == 'A'):
+            militaryTime.append(endTimeInt)
+        else:
+            militaryTime.append(endTimeInt + 1200)
+
+        return militaryTime
