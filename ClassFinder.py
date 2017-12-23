@@ -12,12 +12,13 @@ def main():
     WINTER_TERM_2018 = '201810'
     SPRING_TERM_2018 = '201820'
     
-    call('python ../manage.py migrate BetterClassFinder zero', shell=True)
-    call('python ../manage.py makemigrations BetterClassFinder', shell=True)
-    call('python ../manage.py migrate BetterClassFinder', shell=True)
+    call('python3 ../manage.py migrate BetterClassFinder zero', shell=True)
+    call('python3 ../manage.py makemigrations BetterClassFinder', shell=True)
+    call('python3 ../manage.py migrate BetterClassFinder', shell=True)
     
     databaseFetcher = DatabaseFetcher(
         term=WINTER_TERM_2018,
+        subjects=['MATH'],
     )
     
     courseList = databaseFetcher.query()
@@ -25,6 +26,32 @@ def main():
     term = Term(name="Winter 2018")
     term.save()
     for course in courseList:
+        primaryDate = course.dates[0]
+        primaryDateModel = CourseDate(
+            time_start = primaryDate.timeStart,
+            time_end = primaryDate.timeEnd,
+            time_start_period = primaryDate.timeStartPeriod,
+            time_end_period = primaryDate.timeEndPeriod,
+            time_days = primaryDate.days,
+            time_building = primaryDate.classBuilding,
+            time_room_number = primaryDate.classNumber
+        )
+        primaryDateModel.save()
+
+        secondaryDateModel = None
+        if len(course.dates) > 1:
+            secondaryDate = course.dates[1]
+            secondaryDateModel = CourseDate(
+                time_start = secondaryDate.timeStart,
+                time_end = secondaryDate.timeEnd,
+                time_start_period = secondaryDate.timeStartPeriod,
+                time_end_period = secondaryDate.timeEndPeriod,
+                time_days = secondaryDate.days,
+                time_building = secondaryDate.classBuilding,
+                time_room_number = secondaryDate.classNumber
+            )
+            secondaryDateModel.save()
+        
         courseModel = Course(
             course_subject = course.subject,
             course_number = course.courseNumber,
@@ -36,24 +63,10 @@ def main():
             course_restrictions = course.restrictions,
             course_prereq = course.prereq,
             course_additional_info = course.additionalInfo,
-            course_crn = course.crn
+            course_crn = course.crn,
+            primary_course_date = primaryDateModel,
+            secondary_course_date = secondaryDateModel,
         )
-        
-        courseModel.save()
-        
-        for date in course.dates:
-            dateModel = CourseDate(
-                time_start = date.timeStart,
-                time_end = date.timeEnd,
-                time_start_period = date.timeStartPeriod,
-                time_end_period = date.timeEndPeriod,
-                time_days = date.days,
-                time_building = date.classBuilding,
-                time_room_number = date.classNumber
-            )
-            dateModel.save()
-            courseModel.course_dates.add(dateModel)
-            
         courseModel.save()
         term.courses.add(courseModel)
     

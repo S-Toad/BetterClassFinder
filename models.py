@@ -23,7 +23,27 @@ class Course(models.Model):
     course_additional_info = models.CharField(max_length=512, blank=True)
     course_crn = models.CharField(max_length=8)
 
-    course_dates = models.ManyToManyField(CourseDate)
+    primary_course_date = models.OneToOneField(
+        CourseDate,
+        on_delete=models.CASCADE,
+        related_name='primary_course_date',
+    )
+    
+    secondary_course_date = models.OneToOneField(
+        CourseDate,
+        on_delete=models.CASCADE,
+        related_name='secondary_course_date',
+        null=True,
+    )
+    
+    '''
+    def getPrimaryDate(self):
+        return self.course_dates.all()[0]
+    
+    def getSecondaryDate(self):
+        size = len(self.course_dates.all())
+        
+        return None if size == 1 else self.course_dates.all()[1]
     
     def getDates(self):
         dateModels = self.course_dates.all()
@@ -46,6 +66,7 @@ class Course(models.Model):
                     break
             
         return dateString
+    '''
 
 class Term(models.Model):
     name = models.CharField(max_length=16)
