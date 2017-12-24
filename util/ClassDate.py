@@ -1,64 +1,70 @@
-
-class ClassDate():
-    def __init__(self, rawTime, rawClass):
-        self.rawTime = rawTime
-        self.rawClass = rawClass
-        
-        self.timeStart = ''
-        self.timeEnd = ''
-        self.timeStartPeriod = ''
-        self.timeEndPeriod = ''
+# pylint: disable=R0902
+class ClassDate(object):
+    """Creates a Class_Date object which contains information on when a class is."""
+    def __init__(self, raw_time, raw_class):
+        self.raw_time = raw_time
+        self.raw_class = raw_class
+        self.time_start = ''
+        self.time_end = ''
+        self.time_start_period = ''
+        self.time_end_period = ''
         self.days = ''
-        self.classBuilding = ''
-        self.classNumber = ''
-    
-    def clean(self):
-        if (self.rawTime == 'TBA' or self.rawTime.split(' ')[3] == '-'):
-            self.days = 'TBA'
-            self.timeStart = self.timeEnd = self.timeStartPeriod = self.timeEndPeriod = None
-        else:
-            timeSplit = self.rawTime.split(' ')
-            self.days = timeSplit[1]
-            timeSpan = timeSplit[3]
-            self.timeEndPeriod = 'P' if timeSplit[4] == 'pm' else 'A'
-            
-            self.timeStart, self.timeEnd = timeSpan.split('-')
-            
-            if (self.timeEndPeriod == 'A'):
-                self.timeStartPeriod = 'A'
-            else:
-                timeStartInt = int(self.timeStart.split(':')[0])
-                timeEndInt = int(self.timeEnd.split(':')[0])
-                
-                if (timeStartInt == 12 or (timeEndInt != 12 and timeStartInt <= timeEndInt)):
-                    self.timeStartPeriod = 'P'
-                else:
-                    self.timeStartPeriod = 'A'
-        
-        if (self.rawClass == 'TBA'):
-            self.classBuilding = 'TBA'
-            self.classNumber = 'N/A'
-        else:
-            self.classBuilding, self.classNumber = self.rawClass.split(' ')
-            self.classNumber = self.classNumber.replace(u'\xa0', u'')
+        self.class_building = ''
+        self.class_number = ''
 
-    def getMilitaryTime(self):
-        if not self.timeStart:
+    def clean(self):
+        """Cleans up attributes of ClassDate"""
+        if (self.raw_time == 'TBA' or self.raw_time.split(' ')[3] == '-'):
+            self.days = 'TBA'
+            self.time_start = self.time_end = self.time_start_period = self.time_end_period = None
+        else:
+            time_split = self.raw_time.split(' ')
+            self.days = time_split[1]
+            time_span = time_split[3]
+            self.time_end_period = 'P' if time_split[4] == 'pm' else 'A'
+
+            self.time_start, self.time_end = time_span.split('-')
+
+            if self.time_end_period == 'A':
+                self.time_start_period = 'A'
+            else:
+                time_start_int = int(self.time_start.split(':')[0])
+                time_end_int = int(self.time_end.split(':')[0])
+
+                if (time_start_int == 12 or
+                        (time_end_int != 12 and time_start_int <= time_end_int)):
+                    self.time_start_period = 'P'
+                else:
+                    self.time_start_period = 'A'
+
+        if self.raw_class == 'TBA':
+            self.class_building = 'TBA'
+            self.class_number = 'N/A'
+        else:
+            self.class_building, self.class_number = self.raw_class.split(' ')
+            self.class_number = self.class_number.replace(u'\xa0', u'')
+
+    def get_military_time(self):
+        """Converts stored time attributes to military time
+
+        Returns:
+            Integer List (Ex: [800, 1000])"""
+        if not self.time_start:
             return [-1, -1]
 
-        militaryTime = []
+        military_time = []
 
-        startTimeInt = int(self.timeStart.replace(":", ""))
-        endTimeInt = int(self.timeEnd.replace(":", ""))
+        start_time_int = int(self.time_start.replace(":", ""))
+        end_time_int = int(self.time_end.replace(":", ""))
 
-        if (self.timeStartPeriod == 'A'):
-            militaryTime.append(startTimeInt)
+        if self.time_start_period == 'A':
+            military_time.append(start_time_int)
         else:
-            militaryTime.append(startTimeInt + 1200)
-        
-        if (self.timeEndPeriod == 'A'):
-            militaryTime.append(endTimeInt)
-        else:
-            militaryTime.append(endTimeInt + 1200)
+            military_time.append(start_time_int + 1200)
 
-        return militaryTime
+        if self.time_end_period == 'A':
+            military_time.append(end_time_int)
+        else:
+            military_time.append(end_time_int + 1200)
+
+        return military_time

@@ -1,12 +1,16 @@
 from util.Course import Course
 
-class CourseConstructor():
+
+# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-few-public-methods
+class CourseConstructor(object):
+    """CourseConstructor prepares a Course Object to be created"""
     def __init__(self):
         self.subject = ''
-        self.courseNumber = ''
-        self.className = ''
-        self.classSize = ''
-        self.profName = ''
+        self.course_number = ''
+        self.class_name = ''
+        self.class_size = ''
+        self.prof_name = ''
         self.span = ''
         self.gur = ''
         self.dates = []
@@ -14,50 +18,57 @@ class CourseConstructor():
         self.fee = ''
         self.restrictions = ''
         self.prereq = ''
-        self.additionalInfo = ''
+        self.additional_info = ''
         self.crn = ''
+        self.credit_min = ''
+        self.credit_max = ''
 
     def construct(self):
+        """Constructs course object using attributes.
+
+        Returns:
+            Course Object
+        """
         self.prereq = self.prereq.replace('  ', ' ').rstrip()
         self.restrictions = self.restrictions.replace('  ', ' ').rstrip()
-        self.additionalInfo = self.additionalInfo.replace('  ', ' ').rstrip()
-    
+        self.additional_info = self.additional_info.replace('  ', ' ').rstrip()
+
         # There's a space in front of these strings
         self.prereq = self.prereq[1:]
         self.restrictions = self.restrictions[1:]
-        self.additionalInfo = self.additionalInfo[1:]
-        
-        # This isn't true all time time
-        self.additionalInfo = self.additionalInfo.replace('CLOSED:  Waitlist Available', '')
-        self.additionalInfo = self.additionalInfo.replace('CLOSED', '')
+        self.additional_info = self.additional_info[1:]
 
-        if (self.fee != ''):
+        # Performing our own check later
+        self.additional_info = self.additional_info.replace('CLOSED:  Waitlist Available', '')
+        self.additional_info = self.additional_info.replace('CLOSED', '')
+
+        if self.fee != '':
             self.fee = "$" + self.fee.split("$")[1]
 
-        for courseDate in self.dates:
-            courseDate.clean()
+        for course_date in self.dates:
+            course_date.clean()
 
         if "-" in self.credits:
-            self.creditMin, self.creditMax = self.credits.split("-")
+            self.credit_min, self.credit_max = self.credits.split("-")
         elif "/" in self.credits:
             numerator, denominator = self.credits.split("/")
-            self.creditMin = self.creditMax = float(numerator) / float(denominator)
+            self.credit_min = self.credit_max = float(numerator) / float(denominator)
         else:
-            self.creditMin = self.creditMax = self.credits
+            self.credit_min = self.credit_max = self.credits
 
 
         return Course(
             self.subject,
-            self.courseNumber,
-            self.className,
-            self.profName,
+            self.course_number,
+            self.class_name,
+            self.prof_name,
             self.gur,
             self.dates,
-            self.creditMin,
-            self.creditMax,
+            self.credit_min,
+            self.credit_max,
             self.fee,
             self.restrictions,
             self.prereq,
-            self.additionalInfo,
+            self.additional_info,
             self.crn
         )

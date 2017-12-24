@@ -1,56 +1,104 @@
-from django.http import JsonResponse
-from BetterClassFinder.models import Term, Course, CourseDate
-from django.db.models import Q
 import copy
+from django.http import JsonResponse
+from django.db.models import Q
+from BetterClassFinder.models import Term
+from BetterClassFinder.models import Course
+from BetterClassFinder.models import CourseDate
 
-def get_courses(request):    
-    paramDicts = generateDictionary(request.META['QUERY_STRING'])
-    listOfCourses = []
-    
-    if (not paramDicts):
-        listOfCourses = Course.objects.all()
+def get_courses(request):
+    """ Returns a JSON of all courses found in a query"""
+    parameter_dictionaries = generate_param_dict(request.META['QUERY_STRING'])
+    list_of_courses = []
+
+    if not parameter_dictionaries:
+        # pylint: disable=E1101
+        list_of_courses = Course.objects.all()
     else:
-        for paramDict in paramDicts:
-            q = Course.objects
-            q = generateQObject(paramDict['c_subj'], 'course_subject__iexact', q)
-            q = generateQObject(paramDict['c_num'], 'course_number__iexact', q)
-            q = generateQObject(paramDict['c_name'], 'course_name__icontains', q)
-            q = generateQObject(paramDict['c_prof'], 'course_prof_name__icontains', q)
-            q = generateQObject(paramDict['c_gur'], 'course_gur__icontains', q)
-            q = generateQObject(paramDict['c_restrict'], 'course_restrictions__icontains', q)
-            q = generateQObject(paramDict['c_prereq'], 'course_prereq__icontains', q)
-            q = generateQObject(paramDict['c_info'], 'course_additional_info__icontains', q)
-            q = generateQObject(paramDict['c_crn'], 'course_crn__exact', q)
-            q = generateQObject(paramDict['c_ptime_days'], 'primary_course_date__iexact', q)
-            q = generateQObject(paramDict['c_ptime_start'], 'primary_course_date__time_start__gte', q)
-            q = generateQObject(paramDict['c_ptime_end'], 'primary_course_date__time_end__lte', q)
-            q = generateQObject(paramDict['c_ptime_building'], 'primary_course_date__icontains', q)
-            q = generateQObject(paramDict['c_ptime_nroom'], 'primary_course_date__iexact', q)
-            q = generateQObject(paramDict['c_stime_days'], 'secondary_course_date__iexact', q)
-            q = generateQObject(paramDict['c_stime_start'], 'secondary_course_date__time_start__gte', q)
-            q = generateQObject(paramDict['c_stime_end'], 'secondary_course_date__time_end__lte', q)
-            q = generateQObject(paramDict['c_stime_building'], 'secondary_course_date__icontains', q)
-            q = generateQObject(paramDict['c_stime_nroom'], 'secondary_course_date__iexact', q)
-            
-            if paramDict['c_credit']:
-                print(1)
-                q = generateQObject(paramDict['c_credit'], 'course_credits_min__gte', q)
-                q = generateQObject(paramDict['c_credit'], 'course_credits_max__lte', q)
-            else:
-                q = generateQObject(paramDict['c_credit_min'], 'course_credits_min__gte', q)
-                q = generateQObject(paramDict['c_credit_max'], 'course_credits_max__lte', q)
-            
-            if paramDict['c_fee'] != None:
-                feeQ = Q(course_fee__iexact='')
-                print(paramDict['c_fee'])
-                if paramDict['c_fee']:
-                    q = q.exclude(feeQ)
-                else:
-                    q = q.filter(feeQ)
+        for parameter_dictionary in parameter_dictionaries:
+            # pylint: disable=E1101
+            query_set = Course.objects
+            query_set = generate_query_set(
+                parameter_dictionary['c_subj'],
+                'course_subject__iexact', query_set)
+            query_set = generate_query_set(
+                parameter_dictionary['c_num'],
+                'course_number__iexact', query_set)
+            query_set = generate_query_set(
+                parameter_dictionary['c_name'],
+                'course_name__icontains', query_set)
+            query_set = generate_query_set(
+                parameter_dictionary['c_prof'],
+                'course_prof_name__icontains', query_set)
+            query_set = generate_query_set(
+                parameter_dictionary['c_gur'],
+                'course_gur__icontains', query_set)
+            query_set = generate_query_set(
+                parameter_dictionary['c_restrict'],
+                'course_restrictions__icontains', query_set)
+            query_set = generate_query_set(
+                parameter_dictionary['c_prereq'],
+                'course_prereq__icontains', query_set)
+            query_set = generate_query_set(
+                parameter_dictionary['c_info'],
+                'course_additional_info__icontains', query_set)
+            query_set = generate_query_set(
+                parameter_dictionary['c_crn'],
+                'course_crn__exact', query_set)
+            query_set = generate_query_set(
+                parameter_dictionary['c_ptime_days'],
+                'primary_course_date__iexact', query_set)
+            query_set = generate_query_set(
+                parameter_dictionary['c_ptime_start'],
+                'primary_course_date__time_start__gte', query_set)
+            query_set = generate_query_set(
+                parameter_dictionary['c_ptime_end'],
+                'primary_course_date__time_end__lte', query_set)
+            query_set = generate_query_set(
+                parameter_dictionary['c_ptime_building'],
+                'primary_course_date__icontains', query_set)
+            query_set = generate_query_set(
+                parameter_dictionary['c_ptime_nroom'],
+                'primary_course_date__iexact', query_set)
+            query_set = generate_query_set(
+                parameter_dictionary['c_stime_days'],
+                'secondary_course_date__iexact', query_set)
+            query_set = generate_query_set(
+                parameter_dictionary['c_stime_start'],
+                'secondary_course_date__time_start__gte', query_set)
+            query_set = generate_query_set(
+                parameter_dictionary['c_stime_end'],
+                'secondary_course_date__time_end__lte', query_set)
+            query_set = generate_query_set(
+                parameter_dictionary['c_stime_building'],
+                'secondary_course_date__icontains', query_set)
+            query_set = generate_query_set(
+                parameter_dictionary['c_stime_nroom'],
+                'secondary_course_date__iexact', query_set)
 
-            courses = list(q)
-            listOfCourses.extend(courses)
-    
+            if parameter_dictionary['c_credit']:
+                query_set = generate_query_set(
+                    parameter_dictionary['c_credit'],
+                    'course_credits_min__gte', query_set)
+                query_set = generate_query_set(
+                    parameter_dictionary['c_credit'],
+                    'course_credits_max__lte', query_set)
+            else:
+                query_set = generate_query_set(
+                    parameter_dictionary['c_credit_min'],
+                    'course_credits_min__gte', query_set)
+                query_set = generate_query_set(
+                    parameter_dictionary['c_credit_max'],
+                    'course_credits_max__lte', query_set)
+
+            if parameter_dictionary['c_fee'] != None:
+                fee_query_set = Q(course_fee__iexact='')
+                if parameter_dictionary['c_fee']:
+                    query_set = query_set.exclude(fee_query_set)
+                else:
+                    query_set = query_set.filter(fee_query_set)
+
+            list_of_courses.extend(list(query_set))
+
     json_response = [
         {
             "course_subject": course.course_subject,
@@ -84,37 +132,54 @@ def get_courses(request):
                 }
             ] if course.secondary_course_date else [],
         }
-        for course in listOfCourses
+        for course in list_of_courses
     ]
 
     return JsonResponse(json_response, safe=False)
-    
-def generateQObject(values, param, q):
-    qObject = None
-    i = 1
-    for value in values:
+
+def generate_query_set(param_values, param, original_query_set):
+    """Generates a Query Set Object from 2 strings
+
+    Args:
+        * param_values - List | List containing the values of a parameter
+        * param - String | Query String containing what we're querying for
+        * q - QuerySet | QuerySet Object to be updated against
+    Returns:
+        QuerySet Object"""
+    query_set_object = None
+    for param_value in param_values:
         exclude = False
-        if '!' in value:
+        if '!' in param_value:
             exclude = True
-            value = value.replace('!', '')
+            param_value = param_value.replace('!', '')
         # TODO: Eric thinks this is gross, how to do better?
-        evalString = 'global qNewObject\nqNewObject = Q({!s}={!r})'.format(param, value)
-        exec(evalString)
-        
+        eval_string = 'global new_query_object\nnew_query_object = Q({!s}={!r})'.format(
+            param,
+            param_value)
+        exec(eval_string)
+
         if exclude:
-            q = q.exclude(qNewObject)
-        elif qObject == None:
-            qObject = qNewObject
+            # pylint: disable=E0602
+            original_query_set = original_query_set.exclude(new_query_object)
+        elif query_set_object is None:
+            # pylint: disable=E0602
+            query_set_object = new_query_object
         else:
-            qObject = qObject | qNewObject
+            # pylint: disable=E0602
+            query_set_object = query_set_object | new_query_object
 
-    if (qObject != None):
-        return q.filter(qObject)
-    else:
-        return q
+    if query_set_object:
+        return original_query_set.filter(query_set_object)
+    return original_query_set
 
-def generateDictionary(queryString):
-    defaultDict = {
+def generate_param_dict(query_string):
+    """Interprets a meta query string into a dictionary
+
+    Args:
+        Meta Query String
+    Returns:
+        Dictionary"""
+    default_dict = {
         'c_subj': [],
         'c_num': [],
         'c_name': [],
@@ -139,34 +204,34 @@ def generateDictionary(queryString):
         'c_stime_building': [],
         'c_stime_nroom': [],
     }
-    
-    if (queryString == ''):
+
+    if query_string == '':
         return None
-    
-    listOfQueryStrings = []
-    for query in queryString.split('&'):
-        listOfQueryStrings.append(query)
-    if not listOfQueryStrings:
-        listOfQueryStrings.append(queryString)
-    
-    listOfParams = []
-    for query in listOfQueryStrings:
-        emptyList = []
-        for paramValue in query.split('?'):
-            emptyList.append(paramValue.split('='))
-        listOfParams.append(emptyList)
-    
-    listOfDict = []
-    for listOfParam in listOfParams:
-        copyDict = copy.deepcopy(defaultDict)
-        for param in listOfParam:
-            if param[0] in copyDict:
-                if type(copyDict[param[0]]) is list:
-                    copyDict[param[0]].append(param[1])
-                elif param[0] == 'c_fee': # Edge casio
-                    boolio = param[1].lower() =="true" 
-                    copyDict[param[0]] = boolio
+
+    list_of_query_strings = []
+    for query in query_string.split('&'):
+        list_of_query_strings.append(query)
+    if not list_of_query_strings:
+        list_of_query_strings.append(query_string)
+
+    list_of_parameters = []
+    for query in list_of_query_strings:
+        empty_list = []
+        for param_value in query.split('?'):
+            empty_list.append(param_value.split('='))
+        list_of_parameters.append(empty_list)
+
+    list_of_dictionaries = []
+    for list_of_param in list_of_parameters:
+        copy_of_dict = copy.deepcopy(default_dict)
+        for param in list_of_param:
+            if param[0] in copy_of_dict:
+                if type(copy_of_dict[param[0]]) is list:
+                    copy_of_dict[param[0]].append(param[1])
+                elif param[0] == 'c_fee':  # Edge casio
+                    boolio = param[1].lower() == "true"
+                    copy_of_dict[param[0]] = boolio
                 else:
-                    copyDict[param[0]] = param[1]
-        listOfDict.append(copyDict)
-    return listOfDict
+                    copy_of_dict[param[0]] = param[1]
+        list_of_dictionaries.append(copy_of_dict)
+    return list_of_dictionaries

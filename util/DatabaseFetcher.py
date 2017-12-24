@@ -1,15 +1,18 @@
+import copy
+import requests
 from util.ClassDate import ClassDate
-from util.Course import Course
 from util.CourseConstructor import CourseConstructor
 from bs4 import BeautifulSoup
-import requests
-# TODO: Possible values for the parameters should be scraped from database, maybe?
 
-class DatabaseFetcher():
+
+# TODO: Possible values for the parameters should be scraped from database, maybe?
+class DatabaseFetcher(object):
+    """Performs queries on Classfinder"""
+
     WINTER_TERM = '201810'
-    URL = 'https://admin.wwu.edu/pls/wwis/wwsktime.ListClass'     
+    URL = 'https://admin.wwu.edu/pls/wwis/wwsktime.ListClass'
     STARTING_FONT_INDEX = 16
-    
+
     ALL_SUBJECTS = [
         'A/HI',
         'ACCT',
@@ -112,10 +115,10 @@ class DatabaseFetcher():
         'VHCL',
         'WGSS',
     ]
-    
+
     # Mostly for reference
     ALL_GURS = [
-#        'All', Doesn't work
+        # 'All', Doesn't work
         'ACOM',
         'ACGM',
         'BCOM',
@@ -156,7 +159,7 @@ class DatabaseFetcher():
         'Instructor',
         'Dates',
     ]
-    
+
     BASE_DICT = {
         'sel_subj' : [ # Dummy values have to be passed because I bet debug code was left in
             'dummy',
@@ -183,174 +186,196 @@ class DatabaseFetcher():
         'sel_cdts' : '',
     }
 
-    # By default the parameters set is the equivlant of every single course
+    # pylint: disable=too-many-instance-attributes
+    # pylint: disable=R0913
     def __init__(
-        self,
-        subjects=ALL_SUBJECTS,
-        gurs=['All'],
-        open=False,
-        term=WINTER_TERM,
-        instructor='ANY',
-        startTime=0,
-        startTimePeriod='A',
-        endTime=0,
-        endTimePeriod='A',
-        days=[],
-        credits='%',
-        courseNumber=''
+            self,
+            subjects=None,
+            gurs=None,
+            available_slots=False,
+            term=WINTER_TERM,
+            instructor='ANY',
+            start_time=0,
+            start_time_period='A',
+            end_time=0,
+            end_time_period='A',
+            days=None,
+            course_credits='%',
+            course_number=''
     ):
+        if not subjects:
+            self.subjects = self.ALL_SUBJECTS
+
+        if not gurs:
+            self.gurs = ['All']
+
+        if not days:
+            self.days = []
+
         # Copy the default post dictionary so that values and params can be added
-        self.postDict = self.BASE_DICT.copy()
-        
-        # Code below appends onto the dictionary
-        self.postDict['sel_subj'].extend(subjects)
-        self.postDict['sel_gur'].extend(gurs)
-        self.postDict['sel_day'].extend(days)
-        
-        self.postDict['term'] = term
-        self.postDict['sel_inst'] = instructor
-        self.postDict['sel_cdts'] = credits
-        self.postDict['sel_crse'] = courseNumber
-        
-        self.postDict['begin_hh'] = startTime
-        self.postDict['begin_mi'] = startTimePeriod
-        self.postDict['end_hh'] = endTime
-        self.postDict['end_mi'] = endTimePeriod
-        
-        # If we're not looking for open classes we simply send a payload of nothing because that makes sense right
-        if (open):
-            self.postDict['sel_open'].append('Y')
-    
+        self.post_dictionary = copy.deepcopy(self.BASE_DICT)
+
+        self.post_dictionary['sel_subj'].extend(subjects)
+        self.post_dictionary['sel_gur'].extend(gurs)
+        self.post_dictionary['sel_day'].extend(days)
+        self.post_dictionary['term'] = term
+        self.post_dictionary['sel_inst'] = instructor
+        self.post_dictionary['sel_cdts'] = course_credits
+        self.post_dictionary['sel_crse'] = course_number
+        self.post_dictionary['begin_hh'] = start_time
+        self.post_dictionary['begin_mi'] = start_time_period
+        self.post_dictionary['end_hh'] = end_time
+        self.post_dictionary['end_mi'] = end_time_period
+
+        # Only send payload if we want open courses
+        if available_slots:
+            self.post_dictionary['sel_open'].append('Y')
+
     def query(self):
-        print(self.postDict)
-        r = requests.post(self.URL, self.postDict)
-        print(r.status_code, r.reason)
-        
-        return self.constructCourses(r)
+        """Performs a post request
 
-    def constructCourses(self, request):
+        Returns: List of Courses"""
+        classfinder_request = requests.post(self.URL, self.post_dictionary)
+        return self.construct_courses(classfinder_request)
+
+    # pylint: disable=R0914
+    # pylint: disable=R0915
+    # pylint: disable=R0912
+    def construct_courses(self, request):
+        """ Creates a list of courses from a classfinder request
+
+        Args:
+            Request
+
+        Returns:
+            List of Courses"""
+
         soup = BeautifulSoup(request.text, 'html.parser')
-        f = open('test.html', 'w')
-        f.write(soup.prettify())
-        f.close()
         crns = soup.find_all('input', {"name" : "sel_crn"})
-        
         results = soup.find_all('font')
-        
-        courseConstructor = CourseConstructor()
-        courseList = []
-        
-        i = self.STARTING_FONT_INDEX
-        j = 0
-        cap = len(results)
-        while(i < cap):
-            while(i < cap and not self.isClass(results[i])):
-                i+=1
 
-            if (i==cap):
+        course_constructor = CourseConstructor()
+        course_list = []
+
+        line_index = self.STARTING_FONT_INDEX
+        course_counter = 0
+        cap = len(results)
+        while line_index < cap:
+            while (line_index < cap and not self.is_course(results[line_index])):
+                line_index += 1
+
+            if line_index == cap:
                 break
 
-            resultText = results[i].text
-            resultText = resultText.replace('I T', 'IT')
+            result_text = results[line_index].text
+            result_text = result_text.replace('I T', 'IT')  # DB has this subject named incorrectly
 
-            print(resultText)
-            courseConstructor.subject, courseConstructor.courseNumber = resultText.split(' ')
+            course_constructor.subject, course_constructor.course_number = result_text.split(' ')
 
-            i+=1
-            courseConstructor.className = results[i].text
+            line_index += 1
+            course_constructor.class_name = results[line_index].text
 
-            i+=1
-            courseConstructor.classSize = results[i].text
+            line_index += 1
+            course_constructor.class_size = results[line_index].text
 
-            i+=3
-            courseConstructor.profName = results[i].text
+            line_index += 3
+            course_constructor.prof_name = results[line_index].text
 
-            i+=1
-            courseConstructor.span = results[i].text
+            line_index += 1
+            course_constructor.span = results[line_index].text
 
-            i+=1
-            resultText = results[i].text
-            if (resultText != ''):
-                courseConstructor.gur = resultText
+            line_index += 1
+            result_text = results[line_index].text
+            if result_text != '':
+                course_constructor.gur = result_text
 
-            i+=1
-            time = results[i].text
+            line_index += 1
+            time = results[line_index].text
 
-            i+=1
-            room = results[i].text
-            courseConstructor.dates.append(ClassDate(time, room))
+            line_index += 1
+            room = results[line_index].text
+            course_constructor.dates.append(ClassDate(time, room))
 
-            i+=1
-            courseConstructor.credits = results[i].text
+            line_index += 1
+            course_constructor.credits = results[line_index].text
 
-            i+=1
-            resultText = results[i].text
-            if ("$" in resultText):
-                courseConstructor.fee = resultText
-                i+=1
-                if(i == cap):
+            line_index += 1
+            result_text = results[line_index].text
+            if "$" in result_text:
+                course_constructor.fee = result_text
+                line_index += 1
+                if line_index == cap:
                     break
 
-            additionalTimes = []
             prereq = ''
             restrictions = ''
-            additionalInfo = ''
+            additional_info = ''
 
-            resultText = results[i].text
+            result_text = results[line_index].text
+            if ':' in result_text and '-' in result_text:
+                time = results[line_index].text
+                line_index += 1
+                room = results[line_index].text
+                line_index += 1
 
-            if (':' in resultText and '-' in resultText):
-                time = results[i].text
-                i+=1
-                room = results[i].text
-                i+=1
+                course_constructor.dates.append(ClassDate(time, room))
 
-                courseConstructor.dates.append(ClassDate(time, room))
-
-            if(i == cap):
+            if line_index == cap:
                 break
-            resultText = results[i].text
 
-            if (resultText == 'Restrictions: '):
-                i+=1
-                while(i != cap and results[i].text != 'Prerequisites:' and self.isRed(results[i])):
-                    restrictions += ' '  + results[i].text
-                    i+=1
-                courseConstructor.restrictions = restrictions
+            result_text = results[line_index].text
+            if result_text == 'Restrictions: ':
+                line_index += 1
+                while (line_index != cap and
+                       results[line_index].text != 'Prerequisites:' and
+                       self.has_red_font(results[line_index])):
+                    restrictions += ' '  + results[line_index].text
+                    line_index += 1
+                course_constructor.restrictions = restrictions
 
-            if(i == cap):
+            if line_index == cap:
                 break
-            resultText = results[i].text
 
-            if (resultText == 'Prerequisites:'):
-                i+=1
-                while(i != cap and self.isRed(results[i])):
-                    prereq += ' ' + results[i].text
-                    i+=1
-                courseConstructor.prereq = prereq
+            result_text = results[line_index].text
+            if result_text == 'Prerequisites:':
+                line_index += 1
+                while line_index != cap and self.has_red_font(results[line_index]):
+                    prereq += ' ' + results[line_index].text
+                    line_index += 1
+                course_constructor.prereq = prereq
 
-            while (i != cap and self.isAdditionalInfo(results[i])):
-                additionalInfo += ' '  + results[i].text
-                i+=1
+            while line_index != cap and self.is_additional_info(results[line_index]):
+                additional_info += ' '  + results[line_index].text
+                line_index += 1
 
-            courseConstructor.additionalInfo = additionalInfo
-            courseConstructor.crn = crns[j]['value']
-            courseList.append(courseConstructor.construct())
-            courseConstructor = CourseConstructor()
-            j+=1
+            course_constructor.additional_info = additional_info
+            course_constructor.crn = crns[course_counter]['value']
+            course_list.append(course_constructor.construct())
+            course_constructor = CourseConstructor()
+            course_counter += 1
 
             # When we reach a new course section we have to skip over a few lines of junk
-            if (i != cap and results[i].text == 'Class'):
-                print('SKIPPING')
-                i+=14
+            if line_index != cap and results[line_index].text == 'Class':
+                line_index += 14
+        return course_list
 
-        return courseList
+    @staticmethod
+    def has_red_font(result):
+        """Checks if bs4 result has red font
 
-    def isRed(self, result):
-        return (result.has_attr('color') and result['color'] == 'red')
+        Returns: Boolean, True if red font"""
+        return result.has_attr('color') and result['color'] == 'red'
 
-    def isClass(self, result):
-        value = result.find('a')
-        return (value != None)
+    @staticmethod
+    def is_course(result):
+        """Checks if bs4 result is a school course
 
-    def isAdditionalInfo(self, result):
-        return (result.has_attr('size') and result['size'] == '-2')
+        Returns: Boolean, True if course"""
+        return result.find('a') != None
+
+    @staticmethod
+    def is_additional_info(result):
+        """Checks if bs4 result has small text, AKA additional info
+
+        Returns: Boolean, True if small text"""
+        return result.has_attr('size') and result['size'] == '-2'
