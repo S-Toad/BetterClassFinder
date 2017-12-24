@@ -2,3 +2,5 @@
 test.html
 courses.txt
 migrations/
+.vscode/.ropeproject/config.py
+.vscode/.ropeproject/objectdb
