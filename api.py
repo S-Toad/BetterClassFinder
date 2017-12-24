@@ -21,7 +21,33 @@ def get_courses(request):
             q = generateQObject(paramDict['c_prereq'], 'course_prereq__icontains', q)
             q = generateQObject(paramDict['c_info'], 'course_additional_info__icontains', q)
             q = generateQObject(paramDict['c_crn'], 'course_crn__exact', q)
+            q = generateQObject(paramDict['c_ptime_days'], 'primary_course_date__iexact', q)
+            q = generateQObject(paramDict['c_ptime_start'], 'primary_course_date__time_start__gte', q)
+            q = generateQObject(paramDict['c_ptime_end'], 'primary_course_date__time_end__lte', q)
+            q = generateQObject(paramDict['c_ptime_building'], 'primary_course_date__icontains', q)
+            q = generateQObject(paramDict['c_ptime_nroom'], 'primary_course_date__iexact', q)
+            q = generateQObject(paramDict['c_stime_days'], 'secondary_course_date__iexact', q)
+            q = generateQObject(paramDict['c_stime_start'], 'secondary_course_date__time_start__gte', q)
+            q = generateQObject(paramDict['c_stime_end'], 'secondary_course_date__time_end__lte', q)
+            q = generateQObject(paramDict['c_stime_building'], 'secondary_course_date__icontains', q)
+            q = generateQObject(paramDict['c_stime_nroom'], 'secondary_course_date__iexact', q)
             
+            if paramDict['c_credit']:
+                print(1)
+                q = generateQObject(paramDict['c_credit'], 'course_credits_min__gte', q)
+                q = generateQObject(paramDict['c_credit'], 'course_credits_max__lte', q)
+            else:
+                q = generateQObject(paramDict['c_credit_min'], 'course_credits_min__gte', q)
+                q = generateQObject(paramDict['c_credit_max'], 'course_credits_max__lte', q)
+            
+            if paramDict['c_fee'] != None:
+                feeQ = Q(course_fee__iexact='')
+                print(paramDict['c_fee'])
+                if paramDict['c_fee']:
+                    q = q.exclude(feeQ)
+                else:
+                    q = q.filter(feeQ)
+
             courses = list(q)
             listOfCourses.extend(courses)
     
@@ -32,24 +58,31 @@ def get_courses(request):
             "course_name": course.course_name,
             "course_prof_name": course.course_prof_name,
             "course_gur": course.course_gur,
-            "course_credits": course.course_credits,
+            "course_credits_min": course.course_credits_min,
+            "course_credits_max": course.course_credits_max,
             "course_fee": course.course_fee,
             "course_restrictions": course.course_restrictions,
             "course_prereq": course.course_prereq,
             "course_additional_info": course.course_additional_info,
             "course_crn": course.course_crn,
-            "course_dates": [
+            "primary_date": [
                 {
-                    "time_start": courseDate.time_start,
-                    "time_start_period": courseDate.time_start_period,
-                    "time_end": courseDate.time_end,
-                    "time_end_period": courseDate.time_end_period,
-                    "time_days": courseDate.time_days,
-                    "time_building": courseDate.time_building,
-                    "time_room_number": courseDate.time_room_number,
+                    "time_start": course.primary_course_date.time_start,
+                    "time_end": course.primary_course_date.time_end,
+                    "time_days": course.primary_course_date.time_days,
+                    "time_building": course.primary_course_date.time_building,
+                    "time_room_number": course.primary_course_date.time_room_number,
                 }
-                for courseDate in course.course_dates.all()
-            ]
+            ],
+            "secondary_date": [
+                {
+                    "time_start": course.secondary_course_date.time_start,
+                    "time_end": course.secondary_course_date.time_end,
+                    "time_days": course.secondary_course_date.time_days,
+                    "time_building": course.secondary_course_date.time_building,
+                    "time_room_number": course.secondary_course_date.time_room_number,
+                }
+            ] if course.secondary_course_date else [],
         }
         for course in listOfCourses
     ]
@@ -74,12 +107,12 @@ def generateQObject(values, param, q):
             qObject = qNewObject
         else:
             qObject = qObject | qNewObject
-      
+
     if (qObject != None):
         return q.filter(qObject)
     else:
         return q
-    
+
 def generateDictionary(queryString):
     defaultDict = {
         'c_subj': [],
@@ -87,10 +120,10 @@ def generateDictionary(queryString):
         'c_name': [],
         'c_prof': [],
         'c_gur': [],
-        'c_credit_min': None,
-        'c_credit_max': None,
-        'c_credit': None,
-        'c_fee': True,
+        'c_credit_min': [],
+        'c_credit_max': [],
+        'c_credit': [],
+        'c_fee': None,
         'c_restrict': [],
         'c_prereq': [],
         'c_info': [],
@@ -130,6 +163,9 @@ def generateDictionary(queryString):
             if param[0] in copyDict:
                 if type(copyDict[param[0]]) is list:
                     copyDict[param[0]].append(param[1])
+                elif param[0] == 'c_fee': # Edge casio
+                    boolio = param[1].lower() =="true" 
+                    copyDict[param[0]] = boolio
                 else:
                     copyDict[param[0]] = param[1]
         listOfDict.append(copyDict)

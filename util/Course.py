@@ -8,7 +8,8 @@ class Course():
         profName,
         gur,
         dates,
-        credits,
+        creditMin,
+        creditMax,
         fee,
         restrictions,
         prereq,
@@ -21,7 +22,8 @@ class Course():
         self.profName = profName
         self.gur = gur
         self.dates = dates
-        self.credits = credits
+        self.creditMin = creditMin
+        self.creditMax = creditMax
         self.fee = fee
         self.restrictions = restrictions
         self.prereq = prereq

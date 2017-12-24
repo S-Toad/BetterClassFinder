@@ -36,32 +36,16 @@ class CourseConstructor():
 
         for courseDate in self.dates:
             courseDate.clean()
-        '''
-        f = open('courses.txt', 'a')        
-        f.write("--------------------------\n")
-        f.write("Name: " + self.className + '\n')
-        f.write("Subject: " + self.subject + '\n')
-        f.write("Course Number: " + self.courseNumber + '\n')
-        f.write("Class Size: " + self.classSize + '\n')
-        f.write("Prof Name: " + self.profName + '\n')
-        f.write("Span: " + self.span + '\n')
-        f.write("GUR: " + self.gur + '\n')
-        f.write("Credits: " + self.credits + '\n')
-        f.write("Fee: " + self.fee + '\n')
-        f.write("Restrictions: " + self.restrictions + '\n')
-        f.write("Prereq: " + self.prereq + '\n')
-        f.write("Additional Info: " + self.additionalInfo + '\n')
-        f.write("CRN: " + self.crn + '\n')
-        
-        for courseDate in self.dates:
-            courseDate.clean()
-            f.write('Days: ' + courseDate.days + '\n')
-            f.write('Time: ' + courseDate.timeStart + courseDate.timeStartPeriod + '-' + courseDate.timeEnd + courseDate.timeEndPeriod + '\n')
-            f.write('Room: ' + courseDate.classBuilding + ' ' + courseDate.classNumber + '\n')
-        
-        f.close()
-        '''
-        
+
+        if "-" in self.credits:
+            self.creditMin, self.creditMax = self.credits.split("-")
+        elif "/" in self.credits:
+            numerator, denominator = self.credits.split("/")
+            self.creditMin = self.creditMax = float(numerator) / float(denominator)
+        else:
+            self.creditMin = self.creditMax = self.credits
+
+
         return Course(
             self.subject,
             self.courseNumber,
@@ -69,7 +53,8 @@ class CourseConstructor():
             self.profName,
             self.gur,
             self.dates,
-            self.credits,
+            self.creditMin,
+            self.creditMax,
             self.fee,
             self.restrictions,
             self.prereq,

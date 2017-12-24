@@ -18,7 +18,6 @@ def main():
     
     databaseFetcher = DatabaseFetcher(
         term=WINTER_TERM_2018,
-        subjects=['MATH'],
     )
     
     courseList = databaseFetcher.query()
@@ -56,7 +55,8 @@ def main():
             course_name = course.className,
             course_prof_name = course.profName,
             course_gur = course.gur,
-            course_credits = course.credits,
+            course_credits_min = course.creditMin,
+            course_credits_max = course.creditMax,
             course_fee = course.fee,
             course_restrictions = course.restrictions,
             course_prereq = course.prereq,
