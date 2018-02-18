@@ -261,6 +261,8 @@ class DatabaseFetcher(object):
         course_counter = 0
         cap = len(results)
         while line_index < cap:
+            print('{}/{} lines.'.format(line_index, cap))
+
             while (line_index < cap and not self.is_course(results[line_index])):
                 line_index += 1
 
