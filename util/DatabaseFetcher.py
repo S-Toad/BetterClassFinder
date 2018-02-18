@@ -204,13 +204,13 @@ class DatabaseFetcher(object):
             course_number=''
     ):
         if not subjects:
-            self.subjects = self.ALL_SUBJECTS
+            subjects = self.ALL_SUBJECTS
 
         if not gurs:
-            self.gurs = ['All']
+            gurs = ['All']
 
         if not days:
-            self.days = []
+            days = []
 
         # Copy the default post dictionary so that values and params can be added
         self.post_dictionary = copy.deepcopy(self.BASE_DICT)
