@@ -15,8 +15,21 @@ def get_courses(request):
         list_of_courses = Course.objects.all()
     else:
         for parameter_dictionary in parameter_dictionaries:
-            # pylint: disable=E1101
-            query_set = Course.objects
+            query_set = None
+
+            if parameter_dictionary['c_term']:
+                query_set = Term.objects
+                query_set = generate_query_set(
+                    parameter_dictionary['c_term'],
+                    'name__iexact', query_set)
+
+                # TODO: This is gross because of the weird relationship between term
+                # and courses. This query wont ever return more than 1 term, but it
+                # shouldn't need to be told that.
+                query_set = query_set[0].courses
+            else:
+                query_set = Course.objects
+
             query_set = generate_query_set(
                 parameter_dictionary['c_subj'],
                 'course_subject__iexact', query_set)
@@ -113,6 +126,7 @@ def get_courses(request):
             "course_prereq": course.course_prereq,
             "course_additional_info": course.course_additional_info,
             "course_crn": course.course_crn,
+            "course_term": course.term_set.all()[0].name,  # TODO: This is sloppy, need to do a one-to-one relationship
             "primary_date": [
                 {
                     "time_start": course.primary_course_date.time_start,
@@ -203,6 +217,7 @@ def generate_param_dict(query_string):
         'c_stime_end': [],
         'c_stime_building': [],
         'c_stime_nroom': [],
+        'c_term': [],
     }
 
     if query_string == '':
@@ -226,7 +241,7 @@ def generate_param_dict(query_string):
         copy_of_dict = copy.deepcopy(default_dict)
         for param in list_of_param:
             if param[0] in copy_of_dict:
-                if type(copy_of_dict[param[0]]) is list:
+                if type(copy_of_dict[param[0]]) is list:  # TODO: Only c_fee is not a list now
                     copy_of_dict[param[0]].append(param[1])
                 elif param[0] == 'c_fee':  # Edge casio
                     boolio = param[1].lower() == "true"
