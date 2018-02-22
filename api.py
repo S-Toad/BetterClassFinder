@@ -25,7 +25,7 @@ def get_courses(request):
             # TODO: This is gross because of the weird relationship between term
             # and courses. This query wont ever return more than 1 term, but it
             # shouldn't need to be told that.
-            query_set = query_set[0].courses
+            query_set = query_set[0].courses.all()
         else:
             query_set = Course.objects
 
@@ -58,7 +58,7 @@ def get_courses(request):
             'course_crn__exact', query_set)
         query_set = generate_query_set(
             parameter_dictionary['c_ptime_days'],
-            'primary_course_date__iexact', query_set)
+            'primary_course_date__time_days__iexact', query_set)
         query_set = generate_query_set(
             parameter_dictionary['c_ptime_start'],
             'primary_course_date__time_start__gte', query_set)
