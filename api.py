@@ -7,110 +7,109 @@ from BetterClassFinder.models import CourseDate
 
 def get_courses(request):
     """ Returns a JSON of all courses found in a query"""
-    parameter_dictionaries = generate_param_dict(request.META['QUERY_STRING'])
+    parameter_dictionary = generate_param_dict(request)
     list_of_courses = []
 
-    if not parameter_dictionaries:
+    if not parameter_dictionary:
         # pylint: disable=E1101
-        list_of_courses = Course.objects.all()
+        list_of_courses = []
     else:
-        for parameter_dictionary in parameter_dictionaries:
-            query_set = None
+        query_set = None
 
-            if parameter_dictionary['c_term']:
-                query_set = Term.objects
-                query_set = generate_query_set(
-                    parameter_dictionary['c_term'],
-                    'name__iexact', query_set)
+        if parameter_dictionary['c_term']:
+            query_set = Term.objects
+            query_set = generate_query_set(
+                parameter_dictionary['c_term'],
+                'name__iexact', query_set)
 
-                # TODO: This is gross because of the weird relationship between term
-                # and courses. This query wont ever return more than 1 term, but it
-                # shouldn't need to be told that.
-                query_set = query_set[0].courses
+            # TODO: This is gross because of the weird relationship between term
+            # and courses. This query wont ever return more than 1 term, but it
+            # shouldn't need to be told that.
+            query_set = query_set[0].courses
+        else:
+            query_set = Course.objects
+
+        query_set = generate_query_set(
+            parameter_dictionary['c_subj'],
+            'course_subject__iexact', query_set)
+        query_set = generate_query_set(
+            parameter_dictionary['c_num'],
+            'course_number__iexact', query_set)
+        query_set = generate_query_set(
+            parameter_dictionary['c_name'],
+            'course_name__icontains', query_set)
+        query_set = generate_query_set(
+            parameter_dictionary['c_prof'],
+            'course_prof_name__icontains', query_set)
+        query_set = generate_query_set(
+            parameter_dictionary['c_gur'],
+            'course_gur__icontains', query_set)
+        query_set = generate_query_set(
+            parameter_dictionary['c_restrict'],
+            'course_restrictions__icontains', query_set)
+        query_set = generate_query_set(
+            parameter_dictionary['c_prereq'],
+            'course_prereq__icontains', query_set)
+        query_set = generate_query_set(
+            parameter_dictionary['c_info'],
+            'course_additional_info__icontains', query_set)
+        query_set = generate_query_set(
+            parameter_dictionary['c_crn'],
+            'course_crn__exact', query_set)
+        query_set = generate_query_set(
+            parameter_dictionary['c_ptime_days'],
+            'primary_course_date__iexact', query_set)
+        query_set = generate_query_set(
+            parameter_dictionary['c_ptime_start'],
+            'primary_course_date__time_start__gte', query_set)
+        query_set = generate_query_set(
+            parameter_dictionary['c_ptime_end'],
+            'primary_course_date__time_end__lte', query_set)
+        query_set = generate_query_set(
+            parameter_dictionary['c_ptime_building'],
+            'primary_course_date__icontains', query_set)
+        query_set = generate_query_set(
+            parameter_dictionary['c_ptime_nroom'],
+            'primary_course_date__iexact', query_set)
+        query_set = generate_query_set(
+            parameter_dictionary['c_stime_days'],
+            'secondary_course_date__iexact', query_set)
+        query_set = generate_query_set(
+            parameter_dictionary['c_stime_start'],
+            'secondary_course_date__time_start__gte', query_set)
+        query_set = generate_query_set(
+            parameter_dictionary['c_stime_end'],
+            'secondary_course_date__time_end__lte', query_set)
+        query_set = generate_query_set(
+            parameter_dictionary['c_stime_building'],
+            'secondary_course_date__icontains', query_set)
+        query_set = generate_query_set(
+            parameter_dictionary['c_stime_nroom'],
+            'secondary_course_date__iexact', query_set)
+
+        if parameter_dictionary['c_credit']:
+            query_set = generate_query_set(
+                parameter_dictionary['c_credit'],
+                'course_credits_min__gte', query_set)
+            query_set = generate_query_set(
+                parameter_dictionary['c_credit'],
+                'course_credits_max__lte', query_set)
+        else:
+            query_set = generate_query_set(
+                parameter_dictionary['c_credit_min'],
+                'course_credits_min__gte', query_set)
+            query_set = generate_query_set(
+                parameter_dictionary['c_credit_max'],
+                'course_credits_max__lte', query_set)
+
+        if parameter_dictionary['c_fee'] != None:
+            fee_query_set = Q(course_fee__iexact='')
+            if parameter_dictionary['c_fee']:
+                query_set = query_set.exclude(fee_query_set)
             else:
-                query_set = Course.objects
+                query_set = query_set.filter(fee_query_set)
 
-            query_set = generate_query_set(
-                parameter_dictionary['c_subj'],
-                'course_subject__iexact', query_set)
-            query_set = generate_query_set(
-                parameter_dictionary['c_num'],
-                'course_number__iexact', query_set)
-            query_set = generate_query_set(
-                parameter_dictionary['c_name'],
-                'course_name__icontains', query_set)
-            query_set = generate_query_set(
-                parameter_dictionary['c_prof'],
-                'course_prof_name__icontains', query_set)
-            query_set = generate_query_set(
-                parameter_dictionary['c_gur'],
-                'course_gur__icontains', query_set)
-            query_set = generate_query_set(
-                parameter_dictionary['c_restrict'],
-                'course_restrictions__icontains', query_set)
-            query_set = generate_query_set(
-                parameter_dictionary['c_prereq'],
-                'course_prereq__icontains', query_set)
-            query_set = generate_query_set(
-                parameter_dictionary['c_info'],
-                'course_additional_info__icontains', query_set)
-            query_set = generate_query_set(
-                parameter_dictionary['c_crn'],
-                'course_crn__exact', query_set)
-            query_set = generate_query_set(
-                parameter_dictionary['c_ptime_days'],
-                'primary_course_date__iexact', query_set)
-            query_set = generate_query_set(
-                parameter_dictionary['c_ptime_start'],
-                'primary_course_date__time_start__gte', query_set)
-            query_set = generate_query_set(
-                parameter_dictionary['c_ptime_end'],
-                'primary_course_date__time_end__lte', query_set)
-            query_set = generate_query_set(
-                parameter_dictionary['c_ptime_building'],
-                'primary_course_date__icontains', query_set)
-            query_set = generate_query_set(
-                parameter_dictionary['c_ptime_nroom'],
-                'primary_course_date__iexact', query_set)
-            query_set = generate_query_set(
-                parameter_dictionary['c_stime_days'],
-                'secondary_course_date__iexact', query_set)
-            query_set = generate_query_set(
-                parameter_dictionary['c_stime_start'],
-                'secondary_course_date__time_start__gte', query_set)
-            query_set = generate_query_set(
-                parameter_dictionary['c_stime_end'],
-                'secondary_course_date__time_end__lte', query_set)
-            query_set = generate_query_set(
-                parameter_dictionary['c_stime_building'],
-                'secondary_course_date__icontains', query_set)
-            query_set = generate_query_set(
-                parameter_dictionary['c_stime_nroom'],
-                'secondary_course_date__iexact', query_set)
-
-            if parameter_dictionary['c_credit']:
-                query_set = generate_query_set(
-                    parameter_dictionary['c_credit'],
-                    'course_credits_min__gte', query_set)
-                query_set = generate_query_set(
-                    parameter_dictionary['c_credit'],
-                    'course_credits_max__lte', query_set)
-            else:
-                query_set = generate_query_set(
-                    parameter_dictionary['c_credit_min'],
-                    'course_credits_min__gte', query_set)
-                query_set = generate_query_set(
-                    parameter_dictionary['c_credit_max'],
-                    'course_credits_max__lte', query_set)
-
-            if parameter_dictionary['c_fee'] != None:
-                fee_query_set = Q(course_fee__iexact='')
-                if parameter_dictionary['c_fee']:
-                    query_set = query_set.exclude(fee_query_set)
-                else:
-                    query_set = query_set.filter(fee_query_set)
-
-            list_of_courses.extend(list(query_set))
+        list_of_courses = list(query_set)
 
     json_response = [
         {
@@ -186,13 +185,17 @@ def generate_query_set(param_values, param, original_query_set):
         return original_query_set.filter(query_set_object)
     return original_query_set
 
-def generate_param_dict(query_string):
+def generate_param_dict(request):
     """Interprets a meta query string into a dictionary
 
     Args:
         Meta Query String
     Returns:
         Dictionary"""
+
+    if request.GET == {}:
+        return None
+
     default_dict = {
         'c_subj': [],
         'c_num': [],
@@ -220,33 +223,11 @@ def generate_param_dict(query_string):
         'c_term': [],
     }
 
-    if query_string == '':
-        return None
-
-    list_of_query_strings = []
-    for query in query_string.split('&'):
-        list_of_query_strings.append(query)
-    if not list_of_query_strings:
-        list_of_query_strings.append(query_string)
-
-    list_of_parameters = []
-    for query in list_of_query_strings:
-        empty_list = []
-        for param_value in query.split('?'):
-            empty_list.append(param_value.split('='))
-        list_of_parameters.append(empty_list)
-
-    list_of_dictionaries = []
-    for list_of_param in list_of_parameters:
-        copy_of_dict = copy.deepcopy(default_dict)
-        for param in list_of_param:
-            if param[0] in copy_of_dict:
-                if type(copy_of_dict[param[0]]) is list:  # TODO: Only c_fee is not a list now
-                    copy_of_dict[param[0]].append(param[1])
-                elif param[0] == 'c_fee':  # Edge casio
-                    boolio = param[1].lower() == "true"
-                    copy_of_dict[param[0]] = boolio
-                else:
-                    copy_of_dict[param[0]] = param[1]
-        list_of_dictionaries.append(copy_of_dict)
-    return list_of_dictionaries
+    for key in default_dict:
+        get_value = request.GET.get(key)
+        if get_value:
+            if key == 'c_fee':
+                default_dict[key] = get_value.lower() == 'true'
+            else:
+                default_dict[key] = get_value.split(',')
+    return default_dict
