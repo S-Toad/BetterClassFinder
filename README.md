@@ -2,6 +2,15 @@
 
 TODO: General details should go here 
 
+## Files of Interest
+
+### [DatabaseFetcher.py](https://github.com/S-Toad/BetterClassFinder/blob/master/util/DatabaseFetcher.py)
+Handles scraping of the classfinder database. Utilized by our [main class](https://github.com/S-Toad/BetterClassFinder/blob/master/ClassFinder.py) directly to gather information about each term.
+
+### [api.py](https://github.com/S-Toad/BetterClassFinder/blob/master/api.py)
+Handles the API of this project utilizing Django's database models.
+
+
 ## API Documentation
 The API for Better Classfinder is very powerful and the main website for Better Classfinder won't utilize all these features! The API for Better Classfinder contains data for all courses and given POST params, can filter this data for you.
 
